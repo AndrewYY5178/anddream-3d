@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<!-- saved from url=(0082)file:///Users/andrewpenguin/my-claude-project/anddream-brand/3Dintroweb/index.html -->
+<html lang="zh-CN"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AndDream — The Dream That Continues</title>
+<link rel="preconnect" href="https://fonts.googleapis.com/">
+<link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+<link href="./AndDream3Doriginal_files/css2" rel="stylesheet">
+
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: #050508;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  overscroll-behavior: none;
+  -webkit-overscroll-behavior: none;
+  cursor: crosshair;
+}
+
+canvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 0;
+}
+
+/* ── Brand overlay ── */
+#brand-overlay {
+  position: fixed; inset: 0;
+  z-index: 2;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  pointer-events: none;
+  user-select: none;
+}
+
+#brand-overlay .title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(40px, 10vw, 130px);
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  color: rgba(232, 230, 225, 0.92);
+  text-shadow:
+    0 0 120px rgba(200, 200, 230, 0.25),
+    0 0 40px rgba(180, 180, 210, 0.15),
+    0 2px 4px rgba(0, 0, 0, 0.5);
+  line-height: 1;
+  opacity: 0;
+  animation: titleReveal 2.5s cubic-bezier(0.16, 1, 0.3, 1) 0.8s forwards;
+}
+
+#brand-overlay .tagline {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: clamp(14px, 2.2vw, 24px);
+  color: rgba(180, 178, 170, 0.7);
+  letter-spacing: 0.1em;
+  margin-top: clamp(8px, 2vh, 24px);
+  opacity: 0;
+  animation: titleReveal 2.5s cubic-bezier(0.16, 1, 0.3, 1) 1.4s forwards;
+}
+
+@keyframes titleReveal {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Vignette ── */
+#vignette {
+  position: fixed; inset: 0; z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(5,5,8,0.7) 100%);
+}
+
+/* ── Loading ── */
+#loading {
+  position: fixed; inset: 0; z-index: 100;
+  background: #050508;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  transition: opacity 0.8s ease, visibility 0.8s ease;
+}
+#loading.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+#loading .logo {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(24px, 4vw, 40px);
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  color: #E8E6E1;
+}
+#loading .sub {
+  font-family: 'Crimson Pro', serif;
+  font-size: 13px; color: #555;
+  margin-top: 14px; letter-spacing: 0.1em;
+  animation: pulse 2s ease infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+/* ── Scroll indicator ── */
+#scroll-indicator {
+  position: fixed; bottom: 28px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  pointer-events: none;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 8px;
+  transition: opacity 0.8s ease;
+}
+#scroll-indicator.faded { opacity: 0.15; }
+#scroll-indicator .ring {
+  width: 36px; height: 36px;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 50%;
+  position: relative;
+}
+#scroll-indicator .ring::after {
+  content: '';
+  position: absolute; top: 6px; left: 50%;
+  transform: translateX(-50%);
+  width: 2px; height: 10px;
+  background: rgba(255,255,255,0.5);
+  border-radius: 2px;
+}
+#scroll-indicator span {
+  font-family: 'Crimson Pro', serif;
+  font-size: 10px; color: rgba(255,255,255,0.25);
+  letter-spacing: 0.15em;
+}
+
+/* ── Orbit progress ring ── */
+#orbit-ring {
+  position: fixed; bottom: 40px; right: 40px;
+  z-index: 2; pointer-events: none;
+  width: 48px; height: 48px;
+}
+#orbit-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+#orbit-ring .track { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 1; }
+#orbit-ring .progress { fill: none; stroke: rgba(255,255,255,0.4); stroke-width: 1; stroke-linecap: round; }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  #scroll-indicator .ring::after { animation: none; }
+  @keyframes pulse { 0%, 100% { opacity: 0.5; } }
+}
+</style>
+</head>
+<body>
+
+<div id="loading" class="hidden">
+  <div class="logo">ANDREAM</div>
+  <div class="sub">Entering the dream...</div>
+</div>
+
+<div id="brand-overlay">
+  <div class="title">ANDREAM</div>
+  <div class="tagline">The Dream That Continues</div>
+</div>
+
+<div id="vignette"></div>
+
+<div id="scroll-indicator" class="faded">
+  <div class="ring"></div>
+  <span>ORBIT</span>
+</div>
+
+<div id="orbit-ring">
+  <svg viewBox="0 0 48 48">
+    <circle class="track" cx="24" cy="24" r="22"></circle>
+    <circle class="progress" id="orbit-progress" cx="24" cy="24" r="22" stroke-dasharray="138.23" stroke-dashoffset="6.41"></circle>
+  </svg>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ============================================================
+// DOM refs
+// ============================================================
+const loadingEl = document.getElementById('loading');
+const scrollIndicator = document.getElementById('scroll-indicator');
+const orbitProgress = document.getElementById('orbit-progress');
+
+// ============================================================
+// SCENE SETUP
+// ============================================================
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050508);
+scene.fog = new THREE.FogExp2(0x050508, 0.004);
+
+const camera = new THREE.PerspectiveCamera(
+  50, window.innerWidth / window.innerHeight, 0.1, 80
+);
+camera.position.set(0, 2, 18);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.3;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+// ============================================================
+// ENVIRONMENT MAP
+// ============================================================
+function generateEnvMap() {
+  const pmremGenerator = new THREE.PMREMGenerator(renderer);
+  const envScene = new THREE.Scene();
+  envScene.background = new THREE.Color(0x050508);
+
+  // Bright white above — primary specular
+  const top = new THREE.Mesh(
+    new THREE.SphereGeometry(8, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0xffffff })
+  );
+  top.position.set(0, 20, 5);
+  envScene.add(top);
+
+  // Warm accent
+  const warm = new THREE.Mesh(
+    new THREE.SphereGeometry(4, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0xffccaa })
+  );
+  warm.position.set(12, 6, -8);
+  envScene.add(warm);
+
+  // Cool accent
+  const cool = new THREE.Mesh(
+    new THREE.SphereGeometry(4, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0x8899dd })
+  );
+  cool.position.set(-12, -2, -6);
+  envScene.add(cool);
+
+  // Dark ground
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(60, 60),
+    new THREE.MeshBasicMaterial({ color: 0x020204, side: THREE.DoubleSide })
+  );
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = -15;
+  envScene.add(ground);
+
+  const envMap = pmremGenerator.fromScene(envScene, 0.04).texture;
+  pmremGenerator.dispose();
+  return envMap;
+}
+
+const envMap = generateEnvMap();
+scene.environment = envMap;
+
+// ============================================================
+// MERCURY SPHERES
+// ============================================================
+class MercurySphere {
+  constructor(radius, position, segments = 64) {
+    this.radius = radius;
+    this.phase = Math.random() * Math.PI * 2;
+    this.speed = 0.3 + Math.random() * 0.5;
+
+    const geo = new THREE.SphereGeometry(radius, segments, segments);
+    this.basePositions = new Float32Array(geo.attributes.position.array);
+    this.geometry = geo;
+
+    const mat = new THREE.MeshPhysicalMaterial({
+      color: 0xc8c8d0,
+      metalness: 1.0,
+      roughness: 0.03,
+      clearcoat: 0.3,
+      clearcoatRoughness: 0.05,
+      envMapIntensity: 1.8,
+      specularIntensity: 1.5,
+      specularColor: new THREE.Color(0xffffff),
+    });
+
+    this.mesh = new THREE.Mesh(geo, mat);
+    this.mesh.position.copy(position);
+    this.basePosition = position.clone();
+    scene.add(this.mesh);
+  }
+
+  update(time) {
+    const positions = this.geometry.attributes.position.array;
+    const base = this.basePositions;
+    const t = time * this.speed + this.phase;
+
+    for (let i = 0; i < positions.length; i += 3) {
+      const bx = base[i], by = base[i+1], bz = base[i+2];
+      const len = Math.sqrt(bx*bx + by*by + bz*bz);
+      if (len < 0.0001) continue;
+
+      // 4-octave noise for rich organic deformation
+      const o1 = Math.sin(bx * 2.0 + t) * Math.cos(by * 1.8 + t * 0.7) * Math.sin(bz * 2.2 + t * 0.6);
+      const o2 = Math.sin(by * 3.8 - t * 0.5) * Math.cos(bz * 3.5 + t * 0.4) * 0.55;
+      const o3 = Math.sin(bz * 5.5 + t * 0.3) * Math.cos(bx * 5.0 - t * 0.35) * 0.3;
+      const o4 = Math.sin((bx + by) * 7.0 + t * 0.25) * Math.cos((by - bz) * 6.5 - t * 0.2) * 0.15;
+
+      const noise = o1 * 0.08 + o2 * 0.05 + o3 * 0.03 + o4 * 0.015;
+      const scale = 1 + noise;
+
+      positions[i]   = bx * scale;
+      positions[i+1] = by * scale;
+      positions[i+2] = bz * scale;
+    }
+
+    this.geometry.attributes.position.needsUpdate = true;
+    this.geometry.computeVertexNormals();
+  }
+}
+
+// Central large blob + orbiting companions
+const centralBlob = new MercurySphere(2.2, new THREE.Vector3(0, 0, 0), 80);
+const companions = [
+  new MercurySphere(1.1, new THREE.Vector3(4.5, 1.2, 2), 56),
+  new MercurySphere(0.7, new THREE.Vector3(-3.8, -0.5, 3.5), 44),
+  new MercurySphere(1.4, new THREE.Vector3(2, -2.5, -4), 60),
+  new MercurySphere(0.55, new THREE.Vector3(-5, 2.5, -2), 38),
+  new MercurySphere(0.9, new THREE.Vector3(-1.5, -3, 4.5), 48),
+  new MercurySphere(0.65, new THREE.Vector3(5.5, -1, -1.5), 40),
+  new MercurySphere(0.5, new THREE.Vector3(-2.5, 3.5, 1), 36),
+];
+const allMercury = [centralBlob, ...companions];
+
+// ============================================================
+// PARTICLE SYSTEM
+// ============================================================
+const PARTICLE_COUNT = 3500;
+const particleGeo = new THREE.BufferGeometry();
+const pPositions = new Float32Array(PARTICLE_COUNT * 3);
+const pSizes = new Float32Array(PARTICLE_COUNT);
+const pData = new Float32Array(PARTICLE_COUNT * 4); // phaseX, phaseY, phaseZ, orbitRadius
+
+for (let i = 0; i < PARTICLE_COUNT; i++) {
+  // Spherical shell distribution
+  const theta = Math.random() * Math.PI * 2;
+  const phi = Math.acos(2 * Math.random() - 1);
+  const radius = 6 + Math.random() * 18;
+  pPositions[i*3]   = Math.cos(theta) * Math.sin(phi) * radius;
+  pPositions[i*3+1] = Math.sin(theta) * Math.sin(phi) * radius * 0.6;
+  pPositions[i*3+2] = Math.cos(phi) * radius;
+
+  pSizes[i] = Math.random() * 3 + 0.8;
+  pData[i*4]   = Math.random() * Math.PI * 2;
+  pData[i*4+1] = Math.random() * Math.PI * 2;
+  pData[i*4+2] = Math.random() * Math.PI * 2;
+  pData[i*4+3] = radius;
+}
+
+particleGeo.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
+particleGeo.setAttribute('size', new THREE.BufferAttribute(pSizes, 1));
+
+function createGlowTexture() {
+  const c = document.createElement('canvas');
+  c.width = 128; c.height = 128;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.04, 'rgba(255,255,255,0.9)');
+  g.addColorStop(0.15, 'rgba(220,220,240,0.5)');
+  g.addColorStop(0.4, 'rgba(60,60,90,0.1)');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+}
+
+const particleMat = new THREE.PointsMaterial({
+  color: 0xc8c4c0,
+  size: 0.08,
+  map: createGlowTexture(),
+  transparent: true,
+  opacity: 0.6,
+  blending: THREE.AdditiveBlending,
+  depthWrite: false,
+  sizeAttenuation: true,
+});
+
+const particles = new THREE.Points(particleGeo, particleMat);
+scene.add(particles);
+
+// Second particle layer — warmer, smaller, closer
+const innerCount = 1500;
+const innerGeo = new THREE.BufferGeometry();
+const innerPos = new Float32Array(innerCount * 3);
+const innerSizes = new Float32Array(innerCount);
+const innerData = new Float32Array(innerCount * 4);
+
+for (let i = 0; i < innerCount; i++) {
+  const theta = Math.random() * Math.PI * 2;
+  const phi = Math.acos(2 * Math.random() - 1);
+  const radius = 2.5 + Math.random() * 8;
+  innerPos[i*3]   = Math.cos(theta) * Math.sin(phi) * radius;
+  innerPos[i*3+1] = Math.sin(theta) * Math.sin(phi) * radius * 0.7;
+  innerPos[i*3+2] = Math.cos(phi) * radius;
+  innerSizes[i] = Math.random() * 1.5 + 0.3;
+  innerData[i*4]   = Math.random() * Math.PI * 2;
+  innerData[i*4+1] = Math.random() * Math.PI * 2;
+  innerData[i*4+2] = Math.random() * Math.PI * 2;
+  innerData[i*4+3] = radius;
+}
+innerGeo.setAttribute('position', new THREE.BufferAttribute(innerPos, 3));
+
+const innerMat = new THREE.PointsMaterial({
+  color: 0xaaccff,
+  size: 0.03,
+  map: createGlowTexture(),
+  transparent: true,
+  opacity: 0.45,
+  blending: THREE.AdditiveBlending,
+  depthWrite: false,
+  sizeAttenuation: true,
+});
+
+const innerParticles = new THREE.Points(innerGeo, innerMat);
+scene.add(innerParticles);
+
+// Store particle data for animation
+const particleLayers = [
+  { points: particles, geo: particleGeo, data: pData, count: PARTICLE_COUNT },
+  { points: innerParticles, geo: innerGeo, data: innerData, count: innerCount },
+];
+
+function updateParticles(time) {
+  for (const layer of particleLayers) {
+    const pos = layer.geo.attributes.position.array;
+    const data = layer.data;
+    for (let i = 0; i < layer.count; i++) {
+      const px = data[i*4], py = data[i*4+1], pz = data[i*4+2], r = data[i*4+3];
+      const speed = 0.15 + (20 - r) * 0.01;
+      pos[i*3]   += Math.sin(time * speed + px) * 0.004;
+      pos[i*3+1] += Math.cos(time * speed * 0.7 + py) * 0.003;
+      pos[i*3+2] += Math.cos(time * speed * 0.6 + pz) * 0.004;
+    }
+    layer.geo.attributes.position.needsUpdate = true;
+  }
+}
+
+// ============================================================
+// LIGHTING
+// ============================================================
+const ambient = new THREE.AmbientLight(0x1a1a2e, 0.3);
+scene.add(ambient);
+
+const keyLight = new THREE.DirectionalLight(0xffeedd, 2.5);
+keyLight.position.set(8, 12, 10);
+scene.add(keyLight);
+
+const rimLight = new THREE.DirectionalLight(0x5566aa, 1.2);
+rimLight.position.set(-6, 2, -12);
+scene.add(rimLight);
+
+const fillLight = new THREE.DirectionalLight(0x8899bb, 0.6);
+fillLight.position.set(0, -5, 8);
+scene.add(fillLight);
+
+const ptMain = new THREE.PointLight(0xffffff, 50, 20);
+ptMain.position.set(3, 2, 5);
+scene.add(ptMain);
+
+const ptWarm = new THREE.PointLight(0xffccaa, 25, 12);
+ptWarm.position.set(-4, -1, -4);
+scene.add(ptWarm);
+
+const ptCool = new THREE.PointLight(0x8899dd, 20, 10);
+ptCool.position.set(5, 3, -6);
+scene.add(ptCool);
+
+// ============================================================
+// SUBTLE GEOMETRIC ACCENTS
+// ============================================================
+function createRing(radius, position, color = 0x334466, opacity = 0.15) {
+  const geo = new THREE.TorusGeometry(radius, 0.015, 16, 120);
+  const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
+  const ring = new THREE.Mesh(geo, mat);
+  ring.position.copy(position);
+  ring.rotation.x = Math.random() * 0.5;
+  ring.rotation.y = Math.random() * 0.5;
+  return ring;
+}
+
+const accentRings = [
+  createRing(4.5, new THREE.Vector3(0, 0.5, 0), 0x445577, 0.12),
+  createRing(7, new THREE.Vector3(0, -0.3, 0), 0x554466, 0.08),
+  createRing(3, new THREE.Vector3(2, 1.5, -3), 0x446688, 0.1),
+];
+accentRings.forEach(r => scene.add(r));
+
+// ============================================================
+// CAMERA ORBIT (infinite scroll)
+// ============================================================
+const AUTO_SPEED = 0.12;  // radians per second when idle
+const SCROLL_SENSITIVITY = 1.8;
+
+let orbitAngle = 0;
+let orbitVelocity = AUTO_SPEED;
+let totalScrollDelta = 0;
+let lastScrollTime = 0;
+const clock = new THREE.Clock();
+
+// Smooth camera state
+const smoothCamPos = new THREE.Vector3(0, 2, 18);
+const smoothLookTarget = new THREE.Vector3(0, 0, 0);
+
+function getOrbitPosition(angle) {
+  const radius = 14 + Math.sin(angle * 0.7) * 2;
+  const height = 1.5 + Math.sin(angle * 1.3) * 2.5;
+  return new THREE.Vector3(
+    Math.cos(angle) * radius,
+    height,
+    Math.sin(angle) * radius
+  );
+}
+
+// ============================================================
+// SCROLL HANDLING
+// ============================================================
+function onWheel(e) {
+  e.preventDefault();
+  const normalized = e.deltaY / window.innerHeight;
+  const boost = Math.abs(e.deltaY) < 40 ? 4 : 1; // trackpad boost
+  totalScrollDelta += normalized * boost * SCROLL_SENSITIVITY;
+  lastScrollTime = performance.now() * 0.001;
+
+  if (Math.abs(totalScrollDelta) > 0.01) {
+    scrollIndicator.classList.add('faded');
+  }
+}
+
+function onTouchStart(e) {
+  this._touchY = e.touches[0].clientY;
+}
+function onTouchMove(e) {
+  const dy = this._touchY - e.touches[0].clientY;
+  this._touchY = e.touches[0].clientY;
+  totalScrollDelta += (dy / window.innerHeight) * SCROLL_SENSITIVITY * 3;
+  lastScrollTime = performance.now() * 0.001;
+  scrollIndicator.classList.add('faded');
+}
+
+window.addEventListener('wheel', onWheel, { passive: false });
+window.addEventListener('touchstart', onTouchStart, { passive: true });
+window.addEventListener('touchmove', onTouchMove, { passive: true });
+
+// ============================================================
+// ANIMATION LOOP
+// ============================================================
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  const deltaTime = Math.min(clock.getDelta(), 0.1);
+  const time = performance.now() * 0.001;
+
+  // ── Orbit dynamics ──
+  const timeSinceScroll = time - lastScrollTime;
+  const idleFactor = 1 - Math.exp(-timeSinceScroll * 0.8);
+
+  // Apply scroll delta to orbit velocity
+  if (Math.abs(totalScrollDelta) > 0.0001) {
+    orbitVelocity = totalScrollDelta / deltaTime;
+    totalScrollDelta *= 0.7; // decay
+    if (Math.abs(totalScrollDelta) < 0.0005) totalScrollDelta = 0;
+  }
+
+  // Blend toward auto-speed when idle
+  orbitVelocity += (AUTO_SPEED - orbitVelocity) * Math.min(idleFactor * 2, 1) * deltaTime * 1.5;
+
+  // Apply velocity
+  orbitAngle += orbitVelocity * deltaTime;
+
+  // ── Update camera ──
+  const targetPos = getOrbitPosition(orbitAngle);
+  const targetLook = new THREE.Vector3(
+    Math.cos(orbitAngle + 0.3) * 2,
+    Math.sin(orbitAngle * 0.5) * 1.5,
+    Math.sin(orbitAngle + 0.3) * 2
+  );
+
+  const camSmooth = 1 - Math.exp(-deltaTime * 6);
+  smoothCamPos.lerp(targetPos, camSmooth);
+  smoothLookTarget.lerp(targetLook, camSmooth * 0.7);
+
+  camera.position.copy(smoothCamPos);
+  camera.lookAt(smoothLookTarget);
+
+  // ── Mercury animation ──
+  if (!reducedMotion) {
+    for (const s of allMercury) {
+      s.update(time);
+    }
+  }
+
+  // ── Orbital drift for companions ──
+  for (let i = 0; i < companions.length; i++) {
+    const s = companions[i];
+    const base = s.basePosition;
+    const orbitR = Math.sqrt(base.x*base.x + base.z*base.z);
+    const baseAngle = Math.atan2(base.z, base.x);
+    const a = baseAngle + time * (0.08 + i * 0.03) + orbitAngle * 0.15;
+    s.mesh.position.x = Math.cos(a) * orbitR;
+    s.mesh.position.z = Math.sin(a) * orbitR;
+    s.mesh.position.y = base.y + Math.sin(time * 0.3 + i) * 0.4;
+  }
+
+  // ── Particles ──
+  if (!reducedMotion) {
+    updateParticles(time);
+  }
+
+  // ── Accent rings rotate ──
+  accentRings.forEach((r, i) => {
+    r.rotation.z += deltaTime * (0.04 + i * 0.02);
+    r.rotation.x += deltaTime * (0.02 + i * 0.015);
+  });
+
+  // ── Update orbit progress ring ──
+  const orbitNormalized = ((orbitAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) / (Math.PI * 2);
+  const circumference = 138.23;
+  orbitProgress.setAttribute('stroke-dashoffset',
+    (circumference * (1 - orbitNormalized)).toFixed(2));
+
+  // ── Dynamic light intensity ──
+  const lightPulse = 1 + Math.sin(time * 0.3) * 0.15;
+  ptMain.intensity = 45 * lightPulse;
+  ptWarm.intensity = 22 + Math.sin(time * 0.5 + 2) * 5;
+  ptCool.intensity = 18 + Math.cos(time * 0.4 + 1) * 4;
+
+  renderer.render(scene, camera);
+}
+
+// ============================================================
+// RESIZE
+// ============================================================
+function onResize() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+}
+window.addEventListener('resize', onResize);
+window.addEventListener('orientationchange', () => setTimeout(onResize, 300));
+
+// ============================================================
+// INIT
+// ============================================================
+async function init() {
+  // Brief delay for fonts + shader compilation
+  await new Promise(resolve => setTimeout(resolve, 1500));
+
+  loadingEl.classList.add('hidden');
+
+  // Start animation
+  requestAnimationFrame(animate);
+}
+
+if (!renderer.capabilities.isWebGL2 && !window.WebGLRenderingContext) {
+  loadingEl.innerHTML = '<div style="color:#E8E6E1;font-family:\'Playfair Display\',serif;text-align:center;padding:32px;"><p style="font-size:24px;">WebGL Not Available</p><p style="font-size:14px;color:#888;margin-top:16px;">Please open in a modern browser.</p></div>';
+} else {
+  init();
+}
+</script>
+
+
+<canvas data-engine="three.js r160" width="2132" height="1148" style="display: block; width: 1066px; height: 574px;"></canvas></body></html>

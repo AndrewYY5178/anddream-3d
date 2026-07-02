@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AndDream — The Dream That Continues</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,400&family=Noto+Serif+SC:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+:root {
+  --ink: #111111;
+  --paper: #FAFAF8;
+  --ink-light: #3A3A3A;
+  --rule: #1A1A1A;
+  --accent-dim: rgba(0,0,0,0.06);
+}
+
+html { background: var(--paper); }
+
+body {
+  font-family: 'Crimson Pro', 'Noto Serif SC', serif;
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100vh;
+}
+
+/* ── SVG Pattern Library (hidden) ── */
+.patterns { position:absolute; width:0; height:0; overflow:hidden; }
+
+/* ── Page Container ── */
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 100px 48px 120px;
+  position: relative;
+}
+
+/* ── Top Ornamental Rule ── */
+.rule-top {
+  display: flex; align-items: center; gap: 18px;
+  margin-bottom: 72px;
+}
+.rule-top::before, .rule-top::after {
+  content: ''; flex: 1; height: 1px;
+  background: var(--rule);
+}
+.rule-top .diamond {
+  width: 8px; height: 8px;
+  background: var(--rule);
+  transform: rotate(45deg);
+  flex-shrink: 0;
+}
+
+/* ── Hero ── */
+.hero { text-align: center; margin-bottom: 64px; }
+
+.hero h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(48px, 8vw, 88px);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  line-height: 1.1;
+  color: var(--ink);
+  /* Inked impression — subtle depth */
+  text-shadow:
+    0 0.3px 0 rgba(0,0,0,0.05),
+    0 0.8px 1px rgba(0,0,0,0.04);
+}
+
+.hero .tagline {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: clamp(16px, 2.5vw, 22px);
+  color: var(--ink-light);
+  margin-top: 16px;
+  letter-spacing: 0.06em;
+}
+
+/* ── Central Flourish ── */
+.flourish {
+  display: flex; align-items: center; justify-content: center;
+  gap: 20px; margin: 48px 0;
+}
+.flourish .line { width: 64px; height: 1px; background: var(--rule); }
+.flourish .leaf {
+  width: 28px; height: 14px;
+  border: 1px solid var(--rule);
+  border-radius: 50% 0 50% 0;
+  transform: rotate(-30deg);
+  position: relative;
+}
+.flourish .leaf::after {
+  content: ''; position: absolute;
+  top: 4px; left: 4px; right: 4px; bottom: 4px;
+  border: 0.5px solid var(--rule);
+  border-radius: 50% 0 50% 0;
+}
+.flourish .dot {
+  width: 4px; height: 4px; background: var(--rule);
+  border-radius: 50%;
+}
+
+/* ── Content Block ── */
+.block { margin-bottom: 56px; }
+
+.block .en {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(18px, 2.8vw, 24px);
+  font-weight: 400;
+  line-height: 1.7;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+
+.block .en i, .block .en em {
+  font-style: italic;
+}
+
+.block .zh {
+  font-family: 'Noto Serif SC', serif;
+  font-size: clamp(15px, 2vw, 18px);
+  line-height: 2;
+  letter-spacing: 0.04em;
+  color: var(--ink-light);
+  margin-top: 16px;
+}
+
+/* ── Emphasis / Pull Quote ── */
+.pull {
+  position: relative;
+  padding: 40px 0;
+  margin: 48px 0;
+  text-align: center;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+.pull p {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: clamp(20px, 3.2vw, 28px);
+  line-height: 1.6;
+  letter-spacing: 0.03em;
+  color: var(--ink);
+}
+
+/* ── Cross-hatch accent border (left side) ── */
+.hatch-left {
+  position: relative;
+  padding-left: 36px;
+}
+.hatch-left::before {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 12px;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 0.8px,
+    var(--rule) 0.8px,
+    var(--rule) 1px
+  );
+  opacity: 0.25;
+}
+
+/* ── Definition List ── */
+.symbols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin: 40px 0; }
+.symbol-card { text-align: center; }
+.symbol-card .big {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(36px, 6vw, 56px);
+  font-weight: 900;
+  color: var(--ink);
+  line-height: 1;
+}
+.symbol-card .sub {
+  font-size: 14px; color: var(--ink-light);
+  margin-top: 12px;
+  font-style: italic;
+  letter-spacing: 0.06em;
+}
+.symbol-card .desc {
+  font-size: 14px; color: var(--ink-light);
+  margin-top: 8px;
+  line-height: 1.6;
+  letter-spacing: 0.03em;
+}
+
+@media (max-width: 540px) {
+  .symbols { grid-template-columns: 1fr; gap: 24px; }
+  .page { padding: 60px 24px 80px; }
+}
+
+/* ── Closing ── */
+.closing {
+  text-align: center; margin-top: 72px; padding-top: 48px;
+  border-top: 1px solid var(--rule);
+}
+.closing .en-close {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(16px, 2.2vw, 20px);
+  font-style: italic;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+.closing .zh-close {
+  font-family: 'Noto Serif SC', serif;
+  font-size: clamp(18px, 2.6vw, 24px);
+  letter-spacing: 0.12em;
+  color: var(--ink);
+  margin-top: 12px;
+  font-weight: 400;
+}
+
+/* ── Bottom Rule ── */
+.rule-bottom {
+  display: flex; align-items: center; gap: 14px;
+  margin-top: 64px;
+}
+.rule-bottom::before, .rule-bottom::after {
+  content: ''; flex: 1; height: 1px;
+  background: var(--rule);
+}
+.rule-bottom .dot { width: 4px; height: 4px; background: var(--rule); border-radius: 50%; flex-shrink: 0; }
+
+/* ── Noise Overlay (subtle plate texture) ── */
+.noise-overlay {
+  position: fixed; inset: 0; pointer-events: none; z-index: 999;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 128px 128px;
+}
+
+/* ── Animations ── */
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.reveal {
+  animation: reveal 1.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.reveal:nth-child(2) { animation-delay: 0.15s; }
+.reveal:nth-child(3) { animation-delay: 0.3s; }
+.reveal:nth-child(4) { animation-delay: 0.45s; }
+.reveal:nth-child(5) { animation-delay: 0.6s; }
+.reveal:nth-child(6) { animation-delay: 0.75s; }
+
+/* ── Print ── */
+@media print {
+  .noise-overlay { display: none; }
+  body { background: white; }
+}
+</style>
+</head>
+<body>
+
+<!-- SVG Pattern Library -->
+<svg class="patterns" aria-hidden="true">
+  <defs>
+    <!-- Single hatch: diagonal lines -->
+    <pattern id="hatch-single" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="8" stroke="#1A1A1A" stroke-width="0.5" opacity="0.2"/>
+    </pattern>
+    <!-- Cross-hatch: both diagonals -->
+    <pattern id="hatch-cross" width="12" height="12" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="0" x2="12" y2="12" stroke="#1A1A1A" stroke-width="0.4" opacity="0.15"/>
+      <line x1="12" y1="0" x2="0" y2="12" stroke="#1A1A1A" stroke-width="0.4" opacity="0.15"/>
+    </pattern>
+    <!-- Dense cross-hatch for shadow areas -->
+    <pattern id="hatch-dense" width="6" height="6" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="0" x2="6" y2="6" stroke="#1A1A1A" stroke-width="0.6" opacity="0.22"/>
+      <line x1="6" y1="0" x2="0" y2="6" stroke="#1A1A1A" stroke-width="0.6" opacity="0.22"/>
+    </pattern>
+  </defs>
+</svg>
+
+<!-- Subtle noise texture overlay -->
+<div class="noise-overlay" aria-hidden="true"></div>
+
+<!-- ── PAGE ── -->
+<main class="page">
+
+  <!-- Top ornamental rule -->
+  <div class="rule-top reveal">
+    <span class="diamond"></span>
+    <span class="diamond" style="width:5px;height:5px;"></span>
+    <span class="diamond"></span>
+  </div>
+
+  <!-- Hero -->
+  <header class="hero reveal">
+    <h1>AN&#8202;DREAM</h1>
+    <p class="tagline">The Dream That Continues</p>
+  </header>
+
+  <!-- Flourish -->
+  <div class="flourish reveal" aria-hidden="true">
+    <span class="line"></span>
+    <span class="leaf"></span>
+    <span class="dot"></span>
+    <span class="leaf" style="transform:rotate(-30deg) scaleX(-1);"></span>
+    <span class="line"></span>
+  </div>
+
+  <!-- Block 1: Origin -->
+  <section class="block reveal">
+    <p class="en">
+      <strong>AndDream</strong> is a name born from <em>Andrew</em>, yet it reaches far beyond.
+      It begins with <strong>&ldquo;And&rdquo;</strong>&thinsp;&mdash;&thinsp;the very first sound of my name,
+      yet it also carries a deeper meaning: a word of <em>connection</em>,
+      <em>continuation</em>, and <em>endless possibilities</em>.
+    </p>
+    <p class="zh">
+      AndDream 这个名字源于 Andrew，也超越了 Andrew。它以「And」开头——我名字的第一个音节，
+      但这个词更深的含义是：连接、延续、与无限可能。
+    </p>
+  </section>
+
+  <!-- Block 2: "And" as a word -->
+  <div class="pull reveal">
+    <p>
+      &ldquo;And&rdquo; is a word that never stands alone;<br>
+      it always points toward something more.
+    </p>
+  </div>
+
+  <section class="block reveal">
+    <p class="en">
+      So <strong>AndDream</strong> is not just &ldquo;Andrew&rsquo;s Dream.&rdquo;
+      It is also <strong>&ldquo;And&hellip; Dream.&rdquo;</strong>
+      An unfinished sentence. A story still in motion.
+    </p>
+    <p class="zh">
+      所以 AndDream 不只是「Andrew 的梦想」。它也是「And&hellip; Dream」——
+      一个永远未完成的句子，一个仍在继续的故事。
+    </p>
+  </section>
+
+  <!-- Block 3: Symbolism grid -->
+  <div class="symbols reveal">
+    <div class="symbol-card">
+      <div class="big">And</div>
+      <div class="sub">Connection &amp; Continuation</div>
+      <div class="desc">连接、以及、还有未来。每一个终点之后，都有新的开始。</div>
+    </div>
+    <div class="symbol-card">
+      <div class="big">Dream</div>
+      <div class="sub">Imagination &amp; Creation</div>
+      <div class="desc">在艺术与音乐中，梦想是想象力、情感与内心宇宙。</div>
+    </div>
+  </div>
+
+  <!-- Block 4: Philosophy -->
+  <section class="block hatch-left reveal">
+    <p class="en" style="font-style:italic;">
+      Every ending is followed by an &ldquo;And.&rdquo;<br>
+      Every dream leads to another dream.
+    </p>
+    <p class="zh">
+      每一个终点之后，都还有新的开始；<br>
+      每一个梦想实现之后，都孕育着下一个梦想。
+    </p>
+  </section>
+
+  <!-- Block 5: The space -->
+  <div class="pull reveal">
+    <p>
+      A space where ideas become melodies,<br>
+      emotions become expressions,<br>
+      and dreams become reality.
+    </p>
+  </div>
+
+  <section class="block reveal">
+    <p class="en">
+      <strong>AndDream</strong> is a bridge between reality and imagination.
+      It belongs to Andrew, yet it does not belong to Andrew alone.
+      It is a journey&thinsp;&mdash;&thinsp;of creation, of growth,
+      and of <em>infinite possibilities</em>.
+    </p>
+    <p class="zh">
+      AndDream 是一个连接现实与梦境的空间。它属于 Andrew，也不只属于 Andrew。
+      这是一段创造、成长、与无限可能的旅程。
+    </p>
+  </section>
+
+  <!-- Closing -->
+  <footer class="closing reveal">
+    <p class="en-close">
+      AndDream&thinsp;&mdash;&thinsp;where the story never ends,<br>
+      and every dream begins with an &ldquo;And.&rdquo;
+    </p>
+    <p class="zh-close">与梦同行，永不止息。</p>
+  </footer>
+
+  <!-- Bottom rule -->
+  <div class="rule-bottom reveal" aria-hidden="true">
+    <span class="dot"></span>
+    <span class="dot" style="width:2px;height:2px;"></span>
+    <span class="dot"></span>
+  </div>
+
+</main>
+
+</body>
+</html>

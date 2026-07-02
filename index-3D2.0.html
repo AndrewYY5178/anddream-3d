@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AndDream — The Dream That Continues</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Crimson+Pro:ital,wght@0,300;0,400;1,400&family=Noto+Serif+SC:wght@300;400;700&display=swap" rel="stylesheet">
+
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{background:#050508;overflow:hidden;height:100vh;width:100vw;overscroll-behavior:none;-webkit-overscroll-behavior:none}
+canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
+#vignette{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse at center,transparent 45%,rgba(5,5,8,0.8) 100%)}
+#grain{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:128px 128px}
+
+#loading{position:fixed;inset:0;z-index:100;background:#050508;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .8s ease,visibility .8s ease}
+#loading.hidden{opacity:0;visibility:hidden;pointer-events:none}
+#loading .logo{font-family:'Playfair Display',serif;font-size:clamp(24px,4vw,40px);font-weight:900;letter-spacing:.15em;color:#E8E6E1}
+#loading .sub{font-family:'Crimson Pro',serif;font-size:13px;color:#555;margin-top:14px;letter-spacing:.1em;animation:pulse 2s ease infinite}
+@keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+
+#scroll-hint{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:3;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:8px;transition:opacity .8s ease}
+#scroll-hint.faded{opacity:.15}
+#scroll-hint .ring{width:36px;height:36px;border:1px solid rgba(255,255,255,.2);border-radius:50%;position:relative}
+#scroll-hint .ring::after{content:'';position:absolute;top:5px;left:50%;transform:translateX(-50%);width:2px;height:10px;background:rgba(255,255,255,.5);border-radius:2px}
+#scroll-hint span{font-family:'Crimson Pro',serif;font-size:10px;color:rgba(255,255,255,.25);letter-spacing:.15em}
+@media(prefers-reduced-motion:reduce){@keyframes pulse{0%,100%{opacity:.5}}}
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="logo">ANDREAM</div><div class="sub">Entering the dream...</div></div>
+<div id="vignette"></div><div id="grain"></div>
+<div id="scroll-hint"><div class="ring"></div><span>ORBIT</span></div>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+const loadingEl = document.getElementById('loading');
+const scrollHint = document.getElementById('scroll-hint');
+
+// ============================================================
+// SCENE
+// ============================================================
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050508);
+scene.fog = new THREE.FogExp2(0x050508, 0.0025);
+
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 100);
+camera.position.set(0, 5, 22);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.3;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+// ============================================================
+// ENV MAP
+// ============================================================
+function genEnv() {
+  const pm = new THREE.PMREMGenerator(renderer);
+  const s = new THREE.Scene(); s.background = new THREE.Color(0x050508);
+  const mk=(c,p)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(5,16,16),new THREE.MeshBasicMaterial({color:c}));m.position.copy(p);s.add(m);};
+  mk(0xffffff, new THREE.Vector3(0,20,8));
+  mk(0xffccaa, new THREE.Vector3(14,6,-8));
+  mk(0x8899dd, new THREE.Vector3(-14,-3,-6));
+  mk(0x334466, new THREE.Vector3(0,-10,4));
+  const g=new THREE.Mesh(new THREE.PlaneGeometry(80,80),new THREE.MeshBasicMaterial({color:0x020204,side:THREE.DoubleSide}));
+  g.rotation.x=-Math.PI/2;g.position.y=-18;s.add(g);
+  const m=pm.fromScene(s,0.04).texture;pm.dispose();return m;
+}
+scene.environment = genEnv();
+
+// ============================================================
+// MERCURY SPHERE CLASS — extreme fluidity version
+// ============================================================
+class MercurySphere {
+  constructor(radius, position, segments=56, speed=0.5, amp=1.0) {
+    this.radius = radius; this.phase = Math.random()*Math.PI*2;
+    this.speed = speed; this.amp = amp;
+    const geo = new THREE.SphereGeometry(radius, segments, segments);
+    this.basePos = new Float32Array(geo.attributes.position.array);
+    this.geo = geo;
+    const mat = new THREE.MeshPhysicalMaterial({
+      color:0xc8c8d0, metalness:0.9, roughness:0.32,
+      envMapIntensity:0.7, specularIntensity:0.6,
+      specularColor:new THREE.Color(0xffffff),
+    });
+    this.mesh = new THREE.Mesh(geo, mat);
+    this.mesh.position.copy(position);
+    this.worldPos = position.clone();
+    scene.add(this.mesh);
+  }
+  update(time) {
+    const p = this.geo.attributes.position.array;
+    const b = this.basePos;
+    const t = time*this.speed + this.phase;
+    const A = this.amp;
+    for (let i=0;i<p.length;i+=3) {
+      const bx=b[i],by=b[i+1],bz=b[i+2];
+      const len=Math.sqrt(bx*bx+by*by+bz*bz);
+      if(len<0.0001)continue;
+      const o1=Math.sin(bx*2+t)*Math.cos(by*1.8+t*.7)*Math.sin(bz*2.2+t*.6);
+      const o2=Math.sin(by*3.8-t*.5)*Math.cos(bz*3.5+t*.4)*.55;
+      const o3=Math.sin(bz*5.5+t*.3)*Math.cos(bx*5-t*.35)*.3;
+      const o4=Math.sin((bx+by)*7+t*.25)*Math.cos((by-bz)*6.5-t*.2)*.15;
+      const o5=Math.sin(bx*.9+t*.22)*Math.cos(by*.85+t*.28)*Math.sin(bz*.95+t*.2);
+      const o6=Math.sin((bx-bz)*11+t*.15)*Math.cos((by+bz)*9-t*.18)*.08;
+      const n=(o1*.18+o2*.12+o3*.07+o4*.04+o5*.16+o6*.03)*A;
+      const s=1+n;
+      p[i]=bx*s;p[i+1]=by*s;p[i+2]=bz*s;
+    }
+    this.geo.attributes.position.needsUpdate=true;
+    this.geo.computeVertexNormals();
+  }
+}
+
+// ============================================================
+// CENTRAL GIANT BLOB — extreme fluidity
+// ============================================================
+const centralBlob = new MercurySphere(5.8, new THREE.Vector3(0, 0, 0), 110, 0.9, 1.6);
+
+// ============================================================
+// OUTER BLOBS — 15 small deformable + 70 tiny static
+// ============================================================
+const deformableBlobs = [centralBlob];
+const allOrbiting = []; // everything that orbits (has mesh + config)
+
+// 15 small deformable blobs
+for (let i=0;i<15;i++) {
+  const theta=Math.random()*Math.PI*2, phi=Math.acos(2*Math.random()-1);
+  const dist=9+Math.random()*22;
+  const x=Math.cos(theta)*Math.sin(phi)*dist;
+  const y=Math.sin(theta)*Math.sin(phi)*dist*0.6;
+  const z=Math.cos(phi)*dist;
+  const r=0.12+Math.random()*0.35;
+  const seg=Math.floor(16+r*40);
+  const blob=new MercurySphere(r, new THREE.Vector3(x,y,z), seg, 0.35+Math.random()*0.5, 0.4+Math.random()*0.6);
+  deformableBlobs.push(blob);
+  allOrbiting.push({blob, cfg:{orbitR:dist, orbitAngle:Math.atan2(z,x), orbitSpeed:0.03+Math.random()*0.08, yDrift:Math.random()*Math.PI*2, baseY:y}});
+}
+
+// 70 tiny static reflective spheres
+for (let i=0;i<70;i++) {
+  const theta=Math.random()*Math.PI*2, phi=Math.acos(2*Math.random()-1);
+  const dist=7+Math.random()*25;
+  const x=Math.cos(theta)*Math.sin(phi)*dist;
+  const y=Math.sin(theta)*Math.sin(phi)*dist*0.5;
+  const z=Math.cos(phi)*dist;
+  const r=0.04+Math.random()*0.12;
+  const geo=new THREE.SphereGeometry(r,10,10);
+  const mat=new THREE.MeshPhysicalMaterial({
+    color:0xc8c8d0,metalness:0.9,roughness:0.32,
+    envMapIntensity:0.7,specularIntensity:0.6,
+  });
+  const mesh=new THREE.Mesh(geo,mat);
+  mesh.position.set(x,y,z);
+  scene.add(mesh);
+  allOrbiting.push({blob:{mesh,update:()=>{}}, cfg:{orbitR:dist, orbitAngle:Math.atan2(z,x), orbitSpeed:0.02+Math.random()*0.06, yDrift:Math.random()*Math.PI*2, baseY:y}});
+}
+
+// ============================================================
+// PAPER RIBBON — text band around the central blob
+// ============================================================
+const ribbonGroup = new THREE.Group();
+scene.add(ribbonGroup);
+const RIBBON_RADIUS = 8.8;
+
+async function createPaperRibbon() {
+  await document.fonts.load('italic 56px "Playfair Display"');
+
+  const cw=4096, ch=200;
+  const c=document.createElement('canvas');c.width=cw;c.height=ch;
+  const ctx=c.getContext('2d');
+
+  // Transparent — no paper background, just floating text
+  ctx.clearRect(0,0,cw,ch);
+
+  // Tightly packed serif tagline, repeated
+  const phrase='The Dream That Continues  ·  ';
+  ctx.font='italic 56px "Playfair Display",serif';
+  ctx.fillStyle='rgba(252,250,245,0.96)';
+  ctx.textBaseline='middle';
+  ctx.shadowColor='rgba(230,230,255,0.55)';ctx.shadowBlur=32;
+  const tw=ctx.measureText(phrase).width;
+  const reps=Math.ceil(cw/tw)+1;
+  for(let i=0;i<reps;i++) ctx.fillText(phrase, i*tw, ch/2);
+  ctx.shadowBlur=0;
+
+  const tex=new THREE.CanvasTexture(c);
+  tex.wrapS=THREE.RepeatWrapping;tex.wrapT=THREE.ClampToEdgeWrapping;
+  tex.minFilter=THREE.LinearMipmapLinearFilter;tex.magFilter=THREE.LinearFilter;
+  tex.colorSpace=THREE.SRGBColorSpace;
+
+  // Transparent cylinder — text with metallic sheen
+  const bandGeo=new THREE.CylinderGeometry(RIBBON_RADIUS, RIBBON_RADIUS, 2.0, 256, 1, true);
+  const bandMat=new THREE.MeshStandardMaterial({
+    map:tex, side:THREE.DoubleSide, transparent:true, depthWrite:false,
+    metalness:0.7, roughness:0.35, envMapIntensity:0.8,
+  });
+  const band=new THREE.Mesh(bandGeo, bandMat);
+  ribbonGroup.add(band);
+
+  // Keep the thin metallic guide rings
+  const ringGeo=new THREE.TorusGeometry(RIBBON_RADIUS, 0.02, 16, 200);
+  const ringMat=new THREE.MeshBasicMaterial({color:0x445577,transparent:true,opacity:0.2,depthWrite:false});
+  const r1=new THREE.Mesh(ringGeo,ringMat);r1.rotation.x=Math.PI/2;r1.position.y=1.05;ribbonGroup.add(r1);
+  const r2=new THREE.Mesh(ringGeo.clone(),ringMat);r2.rotation.x=Math.PI/2;r2.position.y=-1.05;ribbonGroup.add(r2);
+}
+
+// Cleanup old references
+const ringSprites = [];
+
+// ============================================================
+// PARTICLES — 3 layers
+// ============================================================
+function glowTex(inner='255,255,255') {
+  const c=document.createElement('canvas');c.width=128;c.height=128;
+  const ctx=c.getContext('2d');
+  const g=ctx.createRadialGradient(64,64,0,64,64,64);
+  g.addColorStop(0,`rgba(${inner},1)`);g.addColorStop(.05,`rgba(${inner},.85)`);
+  g.addColorStop(.2,`rgba(${inner},.3)`);g.addColorStop(.5,`rgba(${inner},.03)`);
+  g.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=g;ctx.fillRect(0,0,128,128);
+  return new THREE.CanvasTexture(c);
+}
+
+function particleLayer(count,rRange,color,size,opacity,yS=0.6) {
+  const geo=new THREE.BufferGeometry();
+  const pos=new Float32Array(count*3),data=new Float32Array(count*4);
+  for(let i=0;i<count;i++){
+    const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1);
+    const r=rRange[0]+Math.random()*(rRange[1]-rRange[0]);
+    pos[i*3]=Math.cos(th)*Math.sin(ph)*r;
+    pos[i*3+1]=Math.sin(th)*Math.sin(ph)*r*yS;
+    pos[i*3+2]=Math.cos(ph)*r;
+    data[i*4]=Math.random()*Math.PI*2;data[i*4+1]=Math.random()*Math.PI*2;
+    data[i*4+2]=Math.random()*Math.PI*2;data[i*4+3]=r;
+  }
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  const mat=new THREE.PointsMaterial({color,size,map:glowTex(),transparent:true,opacity,blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true});
+  const pts=new THREE.Points(geo,mat);scene.add(pts);
+  return{pts,geo,pos,data,count};
+}
+
+const pLayers=[
+  particleLayer(6000,[5,32],0xc8c4c0,0.06,0.5,0.6),
+  particleLayer(3000,[2,14],0xaaccff,0.035,0.45,0.7),
+  particleLayer(2000,[7,26],0xffccaa,0.045,0.3,0.5),
+];
+
+function updateParticles(time) {
+  for(const L of pLayers){
+    for(let i=0;i<L.count;i++){
+      const px=L.data[i*4],py=L.data[i*4+1],pz=L.data[i*4+2],r=L.data[i*4+3];
+      const sp=0.1+(32-r)*0.006;
+      L.pos[i*3]+=Math.sin(time*sp+px)*.003;
+      L.pos[i*3+1]+=Math.cos(time*sp*.7+py)*.0025;
+      L.pos[i*3+2]+=Math.cos(time*sp*.6+pz)*.003;
+    }
+    L.geo.attributes.position.needsUpdate=true;
+  }
+}
+
+// ============================================================
+// LIGHTING
+// ============================================================
+scene.add(new THREE.AmbientLight(0x1a1a2e,0.3));
+const dl1=new THREE.DirectionalLight(0xffeedd,3.2);dl1.position.set(8,16,10);scene.add(dl1);
+const dl2=new THREE.DirectionalLight(0x5566aa,1.6);dl2.position.set(-6,2,-14);scene.add(dl2);
+const dl3=new THREE.DirectionalLight(0x8899bb,0.7);dl3.position.set(0,-6,8);scene.add(dl3);
+const pl1=new THREE.PointLight(0xffffff,70,25);pl1.position.set(4,3,6);scene.add(pl1);
+const pl2=new THREE.PointLight(0xffccaa,35,16);pl2.position.set(-5,-1,-6);scene.add(pl2);
+const pl3=new THREE.PointLight(0x8899dd,28,14);pl3.position.set(6,2,-8);scene.add(pl3);
+
+// ============================================================
+// CAMERA ORBIT
+// ============================================================
+const AUTO_SPEED=0.07,SCROLL_SENS=2.2;
+let orbitAngle=0,orbitVel=AUTO_SPEED,scrollD=0,lastScroll=0;
+const clock=new THREE.Clock();
+const camP=new THREE.Vector3(0,5,22),lkAt=new THREE.Vector3(0,0,0);
+
+function orbitPos(angle) {
+  const x=Math.cos(angle*.25)*24+Math.cos(angle*1.3+2)*9+Math.cos(angle*2.8)*4;
+  const z=Math.sin(angle*.25)*24+Math.sin(angle*1.3+2)*9+Math.sin(angle*2.8)*4;
+  const y=4+Math.sin(angle*.35)*7+Math.cos(angle*1.6)*4+Math.sin(angle*3)*2;
+  return new THREE.Vector3(x,y,z);
+}
+
+// ============================================================
+// SCROLL
+// ============================================================
+function onWheel(e){e.preventDefault();
+  const n=e.deltaY/window.innerHeight,boost=Math.abs(e.deltaY)<40?5:1;
+  scrollD+=n*boost*SCROLL_SENS;lastScroll=performance.now()*.001;
+  if(Math.abs(scrollD)>.01)scrollHint.classList.add('faded');}
+function onTS(e){this._ty=e.touches[0].clientY;}
+function onTM(e){const dy=this._ty-e.touches[0].clientY;this._ty=e.touches[0].clientY;
+  scrollD+=(dy/window.innerHeight)*SCROLL_SENS*4;lastScroll=performance.now()*.001;
+  scrollHint.classList.add('faded');}
+window.addEventListener('wheel',onWheel,{passive:false});
+window.addEventListener('touchstart',onTS,{passive:true});
+window.addEventListener('touchmove',onTM,{passive:true});
+
+// ============================================================
+// ANIMATION LOOP
+// ============================================================
+const noMotion=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt=Math.min(clock.getDelta(),.1);
+  const time=performance.now()*.001;
+
+  // Orbit velocity
+  const sinceS=time-lastScroll;
+  if(Math.abs(scrollD)>.0001){orbitVel=scrollD/dt;scrollD*=.6;if(Math.abs(scrollD)<.0005)scrollD=0;}
+  const idleB=1-Math.exp(-sinceS*.5);
+  orbitVel+=(AUTO_SPEED-orbitVel)*Math.min(idleB*2,1)*dt*1.5;
+  orbitAngle+=orbitVel*dt;
+
+  // Camera
+  const tPos=orbitPos(orbitAngle);
+  const tLook=new THREE.Vector3(Math.cos(orbitAngle*.25)*2,Math.sin(orbitAngle*.3)*1.5,Math.sin(orbitAngle*.25)*2);
+  const sc=1-Math.exp(-dt*5);
+  camP.lerp(tPos,sc);lkAt.lerp(tLook,sc*.5);
+  camera.position.copy(camP);camera.lookAt(lkAt);
+
+  // Mercury animation
+  if(!noMotion){for(const s of deformableBlobs)s.update(time);}
+
+  // All orbiting blobs — gentle orbital drift
+  for(const item of allOrbiting){
+    const s=item.blob, cfg=item.cfg;
+    const a=cfg.orbitAngle+time*cfg.orbitSpeed+orbitAngle*.05;
+    s.mesh.position.x=Math.cos(a)*cfg.orbitR;
+    s.mesh.position.z=Math.sin(a)*cfg.orbitR;
+    s.mesh.position.y=cfg.baseY+Math.sin(time*.2+cfg.yDrift)*.6;
+  }
+
+  // Paper ribbon rotation
+  ribbonGroup.rotation.y += dt * 0.2;
+
+  // Particles
+  if(!noMotion)updateParticles(time);
+
+  // Dynamic lights
+  pl1.intensity=60+Math.sin(time*.3)*12;
+  pl2.intensity=30+Math.sin(time*.5+2)*8;
+  pl3.intensity=24+Math.cos(time*.4+1)*6;
+
+  renderer.render(scene,camera);
+}
+
+// ============================================================
+// RESIZE
+// ============================================================
+window.addEventListener('resize',()=>{
+  const w=window.innerWidth,h=window.innerHeight;
+  camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h);
+});
+window.addEventListener('orientationchange',()=>setTimeout(()=>{
+  const w=window.innerWidth,h=window.innerHeight;
+  camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h);
+},300));
+
+// ============================================================
+// INIT
+// ============================================================
+async function init() {
+  await createPaperRibbon();
+  await new Promise(r=>setTimeout(r,600));
+  loadingEl.classList.add('hidden');
+  requestAnimationFrame(animate);
+}
+if(!renderer.capabilities.isWebGL2&&!window.WebGLRenderingContext){
+  loadingEl.innerHTML='<div style="color:#E8E6E1;font-family:\'Playfair Display\',serif;text-align:center;padding:32px;"><p style="font-size:24px;">WebGL Not Available</p><p style="font-size:14px;color:#888;margin-top:16px;">Please open in a modern browser.</p></div>';
+}else{init();}
+</script>
+</body>
+</html>
